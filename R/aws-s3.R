@@ -109,6 +109,15 @@ upload_repo <- function(dir = "." , paths = c("index.html", "bin", "src"),
 #' @export
 download_repo <- function(dir = ".", ...) {
 
+  ensure_empty_dir(dir)
+
+  aws.s3::s3sync(dir, direction = "download", verbose = FALSE, ...)
+
+  invisible(NULL)
+}
+
+ensure_empty_dir <- function(dir) {
+
   if (!dir.exists(dir)) {
     dir.create(dir)
   }
@@ -116,8 +125,6 @@ download_repo <- function(dir = ".", ...) {
   if (length(list.files(dir))) {
     stop("Cannot use a non-empty directory as target")
   }
-
-  aws.s3::s3sync(dir, direction = "download", verbose = FALSE, ...)
 
   invisible(NULL)
 }
