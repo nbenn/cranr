@@ -1,6 +1,3 @@
-drat_version_regex <- "[0-9]\\.[0-9]$"
-drat_contrib_version_regex <- paste0("contrib/", drat_version_regex)
-
 #' Initialize and populate a drat repository
 #'
 #' By creating the `src/contrib` path and a top-level `index.html` file,
@@ -9,7 +6,6 @@ drat_contrib_version_regex <- paste0("contrib/", drat_version_regex)
 #'
 #' @param dir Repository directory
 #'
-#' @author Dirk Eddelbuettel and Nicolas Bennett
 #' @importFrom utils contrib.url untar unzip
 #' @export
 init_repo <- function(dir = ".") {
@@ -32,18 +28,20 @@ init_repo <- function(dir = ".") {
 #' @param ... Passed on to [tools::write_PACKAGES]
 #'
 #' @rdname init_repo
-#' @author Dirk Eddelbuettel and Nicolas Bennett
 #' @export
 insert_pkg <- function(pkg, dir = ".", ...) {
 
   stopifnot(file.exists(pkg), dir.exists(dir),
             file.exists(file.path(dir, "index.html")))
 
-  pkginfo <- get_pkg_info(pkg)
-  pkgtype <- get_pkg_type(pkg, pkginfo)
+  if (grepl(".zip$", pkg) || grepl(".tgz$", pkg)) {
+    stop("Currently only source packages are supported.")
+  }
+
+  pkgtype <- "source"
 
   pkgdir <- normalizePath(
-    contrib_url(dir, pkgtype, pkginfo["Rmajor"]),
+    contrib.url(dir, type = pkgtype),
     mustWork = FALSE
   )
 
@@ -67,240 +65,6 @@ insert_pkgs <- function(pkgs, ...){
   invisible(NULL)
 }
 
-#' @author Dirk Eddelbuettel and Nicolas Bennett
 write_packages <- function(dir, type, ..., latestOnly = FALSE) {
-
-  split_pkgtype <- strsplit(type,"\\.")[[1L]]
-
-  pkgtype <- paste(
-    split_pkgtype[seq.int(1L, min(2L, length(split_pkgtype)))],
-    collapse = "."
-  )
-
-  if (pkgtype == "binary" && grepl("darwin", R.version$os)) {
-    pkgtype <- "mac.binary"
-  }
-
-  tools::write_PACKAGES(dir, ..., type = pkgtype, latestOnly = latestOnly)
+  tools::write_PACKAGES(dir, ..., type = type, latestOnly = latestOnly)
 }
-
-#' @author Dirk Eddelbuettel and Nicolas Bennett
-get_pkg_info <- function(file) {
-
-  stopifnot(file.exists(file))
-
-  td <- tempdir()
-
-  if (grepl(".zip$", file)) {
-    # Windows
-    unzip(file, exdir = td)
-  } else if (grepl(".tgz$", file)) {
-    # macOS
-    untar(file, exdir = td)
-  } else {
-    # Source
-    return(c("Source" = TRUE, "Rmajor" = NA, "osxFolder" = ""))
-  }
-
-  pkgname <- gsub("^([a-zA-Z0-9.]*)_.*", "\\1", basename(file))
-  path <- file.path(td, pkgname, "DESCRIPTION")
-
-  stopifnot(file.exists(path))
-
-  builtstring <- read.dcf(path, 'Built')
-  unlink(file.path(td, pkgname), recursive = TRUE)
-
-  fields <- strsplit(builtstring, "; ")[[1]]
-  names(fields) <- c("Rversion", "OSflavour", "Date", "OS")
-
-  rmajor <- gsub("^R (\\d\\.\\d)\\.\\d.*", "\\1", fields["Rversion"])
-
-  osxFolder <- switch(
-    fields["OSflavour"],
-    `x86_64-apple-darwin13.4.0` = "mavericks",
-    `x86_64-apple-darwin15.6.0` = "el-capitan",
-    `aarch64-apple-darwin20`    = "big-sur-arm64",
-    ""
-  )
-
-  c(fields, "Rmajor" = unname(rmajor), "osxFolder" = osxFolder)
-}
-
-#' @author Jan Schulz, Dirk Eddelbuettel and Nicolas Bennett
-get_pkg_type <- function(file, pkginfo = get_pkg_info(file)) {
-
-  if (grepl("_.*\\.tar\\..*$", file)) {
-
-    "source"
-
-  } else if (grepl("_.*\\.tgz$", file)) {
-
-    res <- "mac.binary"
-
-    if (pkginfo["osxFolder"] == "") {
-
-      if (package_version(pkginfo["Rmajor"]) < package_version("4.1")) {
-
-        switch(
-          pkginfo["Rmajor"],
-          `3.2` = , `3.3` = paste0(res, ".mavericks"),
-          `3.4` = , `3.5` = , `3.6` = paste0(res, ".el-capitan"),
-          res
-        )
-
-      } else if (grepl("aarch64", pkginfo["OSflavour"])) {
-
-        # ARM Mac for R >= 4.1
-        "binary"
-      }
-
-    } else {
-
-      stopifnot(pkginfo["osxFolder"] %in% c("mavericks", "el-capitan",
-                                            "big-sur-arm64"))
-
-      paste0(res, ".", pkginfo["osxFolder"])
-    }
-
-  } else if (grepl("_.*\\.zip$", file)) {
-
-    "win.binary"
-
-  } else {
-
-    stop("Unknown package type", call. = FALSE)
-  }
-}
-
-#' @author Dirk Eddelbuettel and Nicolas Bennett
-type_to_url <- function(type, repos, version) {
-
-  contrib_url <- contrib.url(repos = repos, type = type)
-
-  if (is.null(version)) {
-
-    return(contrib_url)
-
-  } else if (is.na(version)) {
-
-    if (type != "source") {
-
-      extra_ctb <- list.dirs(
-        gsub(drat_contrib_version_regex, "contrib", contrib_url),
-        recursive = FALSE
-      )
-
-      contrib_url <- unique(c(contrib_url, extra_ctb))
-    }
-
-  } else {
-
-    version <- package_version(version)
-
-    contrib_url <- gsub(
-      drat_contrib_version_regex,
-      file.path("contrib", paste0(version$major,".",version$minor)),
-      contrib_url
-    )
-
-  }
-
-  contrib_url
-}
-
-#' @author Dirk Eddelbuettel and Nicolas Bennett
-contrib_url <- function(repos, types = getOption("pkgType"), version = NULL) {
-
-  urls <- lapply(types, type_to_url, repos, version)
-
-  urls <- unlist(urls)
-  names(urls) <- unlist(Map(rep, types, lengths(urls)))
-
-  urls
-}
-
-#' @author Nicolas Bennett
-get_links_or_null <- function(url) {
-
-  res <- httr::GET(url)
-
-  if (httr::http_error(res)) {
-    return(NULL)
-  }
-
-  xml <- httr::content(res, encoding = "UTF-8")
-
-  vcapply(xml2::xml_find_all(xml, "//a"), xml2::xml_attr, "href")
-}
-
-#' @author Nicolas Bennett
-get_flavors <- function(os, base_url = "https://cran.r-project.org",
-                        cran = FALSE) {
-
-  if (cran) {
-    res <- get_links_or_null(paste(base_url, "bin", os, sep = "/"))
-  } else {
-    res <- NULL
-  }
-
-  if (is.null(res)) {
-    res <- c("macosx/mavericks", "macosx/el-capitan", "macosx/big-sur-arm64")
-  } else {
-    res <- res[grepl("/$", res)]
-    res <- res[!grepl("^http|^/|tools|base|old|contrib", res)]
-  }
-
-  paste(os, sub("/$", "", res), sep = "/")
-}
-
-#' @author Nicolas Bennett
-get_versions <- function(flavor, base_url = "https://cran.r-project.org",
-                         cran = FALSE) {
-
-  if (cran) {
-    res <- get_links_or_null(
-      paste(base_url, "bin", flavor, "contrib", sep = "/")
-    )
-  } else {
-    res <- NULL
-  }
-
-  if (is.null(res)) {
-    res <- c("3.1", "3.2", "3.3", "3.4", "3.5", "3.6", "4.0", "4.1")
-  } else {
-    res <- res[grepl("/$", res)]
-    res <- res[!grepl("^/|^r-", res)]
-  }
-
-  file.path("bin", flavor, "contrib", res)
-}
-
-#' @author Nicolas Bennett
-add_path <- function(path, commit, repo) {
-
-  pp <- file.path(path, "PACKAGES")
-  ppz <- paste0(pp, ".gz")
-
-  dir.create(path, FALSE, TRUE)
-
-  if (file.exists(pp) && file.exists(ppz)) {
-    return(invisible(FALSE))
-  }
-
-  if (!file.exists(pp)) {
-    writeLines(character(0), pp)
-    if (commit) {
-      git_add(pp, force = TRUE, repo = repo)
-    }
-  }
-
-  if (!file.exists(ppz)) {
-    writeLines_gz(character(0), ppz)
-    if (commit) {
-      git_add(ppz, force = TRUE, repo = repo)
-    }
-  }
-
-  invisible(TRUE)
-}
-

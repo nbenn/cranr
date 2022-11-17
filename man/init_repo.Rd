@@ -24,6 +24,3 @@ By creating the \code{src/contrib} path and a top-level \code{index.html} file,
 \code{init_repo()} initializes a drat repository. Following that, packages can
 be added using \code{insert_pkg()}/\code{insert_pkgs()}.
 }
-\author{
-Dirk Eddelbuettel and Nicolas Bennett
-}
