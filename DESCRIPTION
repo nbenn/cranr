@@ -12,3 +12,8 @@ RoxygenNote: 7.2.1
 Imports: 
     aws.s3,
     tools
+Suggests:
+    testthat (>= 3.0.0),
+    withr,
+    pkgbuild
+Config/testthat/edition: 3

@@ -36,11 +36,11 @@ init_repo <- function(dir = ".") {
 #' @export
 insert_pkg <- function(pkg, dir = ".", ...) {
 
-  stopifnot(file.exists(file), dir.exists(dir),
+  stopifnot(file.exists(pkg), dir.exists(dir),
             file.exists(file.path(dir, "index.html")))
 
-  pkginfo <- get_pkg_info(file)
-  pkgtype <- get_pkg_type(file, pkginfo)
+  pkginfo <- get_pkg_info(pkg)
+  pkgtype <- get_pkg_type(pkg, pkginfo)
 
   pkgdir <- normalizePath(
     contrib_url(dir, pkgtype, pkginfo["Rmajor"]),
@@ -51,11 +51,11 @@ insert_pkg <- function(pkg, dir = ".", ...) {
     stop("Directory ", pkgdir, " couldn't be created\n")
   }
 
-  if (!file.copy(file, pkgdir, overwrite = TRUE)) {
-    stop("File ", file, " can not be copied to ", pkgdir)
+  if (!file.copy(pkg, pkgdir, overwrite = TRUE)) {
+    stop("File ", pkg, " can not be copied to ", pkgdir)
   }
 
-  write_packages(dir, pkgtype, ...)
+  write_packages(pkgdir, pkgtype, ...)
 
   invisible(NULL)
 }
@@ -218,3 +218,89 @@ contrib_url <- function(repos, types = getOption("pkgType"), version = NULL) {
 
   urls
 }
+
+#' @author Nicolas Bennett
+get_links_or_null <- function(url) {
+
+  res <- httr::GET(url)
+
+  if (httr::http_error(res)) {
+    return(NULL)
+  }
+
+  xml <- httr::content(res, encoding = "UTF-8")
+
+  vcapply(xml2::xml_find_all(xml, "//a"), xml2::xml_attr, "href")
+}
+
+#' @author Nicolas Bennett
+get_flavors <- function(os, base_url = "https://cran.r-project.org",
+                        cran = FALSE) {
+
+  if (cran) {
+    res <- get_links_or_null(paste(base_url, "bin", os, sep = "/"))
+  } else {
+    res <- NULL
+  }
+
+  if (is.null(res)) {
+    res <- c("macosx/mavericks", "macosx/el-capitan", "macosx/big-sur-arm64")
+  } else {
+    res <- res[grepl("/$", res)]
+    res <- res[!grepl("^http|^/|tools|base|old|contrib", res)]
+  }
+
+  paste(os, sub("/$", "", res), sep = "/")
+}
+
+#' @author Nicolas Bennett
+get_versions <- function(flavor, base_url = "https://cran.r-project.org",
+                         cran = FALSE) {
+
+  if (cran) {
+    res <- get_links_or_null(
+      paste(base_url, "bin", flavor, "contrib", sep = "/")
+    )
+  } else {
+    res <- NULL
+  }
+
+  if (is.null(res)) {
+    res <- c("3.1", "3.2", "3.3", "3.4", "3.5", "3.6", "4.0", "4.1")
+  } else {
+    res <- res[grepl("/$", res)]
+    res <- res[!grepl("^/|^r-", res)]
+  }
+
+  file.path("bin", flavor, "contrib", res)
+}
+
+#' @author Nicolas Bennett
+add_path <- function(path, commit, repo) {
+
+  pp <- file.path(path, "PACKAGES")
+  ppz <- paste0(pp, ".gz")
+
+  dir.create(path, FALSE, TRUE)
+
+  if (file.exists(pp) && file.exists(ppz)) {
+    return(invisible(FALSE))
+  }
+
+  if (!file.exists(pp)) {
+    writeLines(character(0), pp)
+    if (commit) {
+      git_add(pp, force = TRUE, repo = repo)
+    }
+  }
+
+  if (!file.exists(ppz)) {
+    writeLines_gz(character(0), ppz)
+    if (commit) {
+      git_add(ppz, force = TRUE, repo = repo)
+    }
+  }
+
+  invisible(TRUE)
+}
+
