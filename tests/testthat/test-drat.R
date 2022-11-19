@@ -8,7 +8,7 @@ test_that("install pkgs", {
     expect_invisible(init_repo(dir))
   )
 
-  expect_true(all(c("index.html", "src") %in% list.files(dir)))
+  expect_true(all(c("index.html", "src", "bin") %in% list.files(dir)))
 
   expect_identical(list.files(file.path(dir, "src")), "contrib")
   expect_length(list.files(file.path(dir, "src", "contrib")), 0L)

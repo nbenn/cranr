@@ -15,5 +15,7 @@ Imports:
 Suggests:
     testthat (>= 3.0.0),
     withr,
-    pkgbuild
+    pkgbuild,
+    xml2,
+    httr2
 Config/testthat/edition: 3

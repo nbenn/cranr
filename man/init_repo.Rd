@@ -2,11 +2,14 @@
 % Please edit documentation in R/drat.R
 \name{init_repo}
 \alias{init_repo}
+\alias{update_repo}
 \alias{insert_pkg}
 \alias{insert_pkgs}
 \title{Initialize and populate a drat repository}
 \usage{
-init_repo(dir = ".")
+init_repo(dir = ".", ...)
+
+update_repo(dir = ".", check_cran = FALSE, base_url = get_cran_url())
 
 insert_pkg(pkg, dir = ".", ...)
 
@@ -15,9 +18,14 @@ insert_pkgs(pkgs, ...)
 \arguments{
 \item{dir}{Repository directory}
 
-\item{pkg, pkgs}{R package bundle(s)}
+\item{...}{Passed on to other methods (\code{update_repo()} in case of
+\code{init_repo()} and \link[tools:writePACKAGES]{tools::write_PACKAGES} for \code{insert_pkg()})}
 
-\item{...}{Passed on to \link[tools:writePACKAGES]{tools::write_PACKAGES}}
+\item{check_cran}{Check CRAN for bin paths}
+
+\item{base_url}{CRAN URL}
+
+\item{pkg, pkgs}{R package bundle(s)}
 }
 \description{
 By creating the \code{src/contrib} path and a top-level \code{index.html} file,
