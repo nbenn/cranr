@@ -15,7 +15,7 @@ download_repo(dir = ".", ...)
 \item{paths}{Paths (relative to \code{dir}) to include in upload}
 
 \item{...}{Further arguments (such as \code{bucket}, \code{region}, etc.) passed to
-methods of \link{aws.s3}}
+methods of \code{\link[aws.s3:s3HTTP]{aws.s3::s3HTTP()}}}
 }
 \description{
 Upload a CRAN-like repository for packages to an AWS S3 bucket.

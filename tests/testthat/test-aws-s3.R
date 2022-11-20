@@ -11,6 +11,8 @@ test_that("s3 sync", {
   init_repo(rem)
   insert_pkg(pkg1, rem)
 
+  Sys.sleep(1)
+
   loc <- withr::local_tempdir()
 
   pkg2 <- pkgbuild::build(
@@ -28,8 +30,7 @@ test_that("s3 sync", {
     },
     `aws.s3::delete_object` = function(object, ...) {
       file <- file.path(rem, object)
-      if (!file.exists(file)) return(FALSE)
-      unlink(file) == 0
+      file.exists(file) && unlink(file) == 0
     },
     `aws.s3::put_object` = function(file, object, ...) {
       file.copy(file, file.path(rem, object), overwrite = TRUE)
@@ -49,8 +50,6 @@ test_that("s3 sync", {
     expect_warning(rm_keys("foo"), "were not deleted"),
     "removing keys"
   )
-  expect_message(rm_keys(existing[1:2]), "removing keys")
-  expect_length(get_keys(), length(existing) - 2L)
 
   expect_snapshot(upload_repo(loc))
 

@@ -1,20 +1,25 @@
 
-get_keys <- function(...) {
-  chr_ply(aws.s3::get_bucket(...), `[[`, "Key")
-}
+get_meta <- function(field, keys = NULL, ...) {
 
-get_md5 <- function(keys = NULL, ...) {
+  res <- aws.s3::get_bucket(...)
 
-  objects <- aws.s3::get_bucket(...)
-
-  md5 <- chr_ply(objects, `[[`, "ETag")
-  md5 <- gsub("\"", "", md5)
-
-  if (is.null(keys)) {
-    return(md5)
+  if (!is.null(keys)) {
+    res <- res[match(keys, chr_ply(res, `[[`, "Key"))]
   }
 
-  md5[match(keys, chr_ply(objects, `[[`, "Key"))]
+  if (is.null(field) || isTRUE(is.na(field))) {
+    return(res)
+  }
+
+  chr_ply(res, `[[`, field)
+}
+
+get_keys <- function(...) get_meta("Key", ...)
+
+get_md5 <- function(...) gsub("\"", "", get_meta("ETag", ...))
+
+get_mtime <- function(...) {
+  strptime(get_meta("LastModified", ...), format = "%FT%H:%M:%OSZ", tz = "UTC")
 }
 
 rm_keys <- function(keys, ...) {
@@ -39,13 +44,27 @@ rm_extra_keys <- function(keys, ...) {
 
 rm_old_keys <- function(files, keys, ...) {
 
-  common <- intersect(get_keys(...), keys)
+  stopifnot(length(files) == length(keys))
 
-  to_rm <- get_md5(common, ...) != tools::md5sum(files[match(common, keys)])
-  rm_keys(common[to_rm], ...)
+  common <- intersect(get_keys(...), keys)
+  cksums <- get_md5(common, ...)
+
+  if (any(grep("-", cksums))) {
+    warning("One or more keys are multi-part objects without checksums. ",
+            "These are always assumed to be different.")
+  }
+
+  different <- common[cksums != tools::md5sum(files[match(common, keys)])]
+
+  if (length(different)) {
+    file_mtime <- file.info(files[match(different, keys)])[["mtime"]]
+    to_rm <- different[get_mtime(different, ...) <= file_mtime]
+  }
+
+  rm_keys(to_rm, ...)
 }
 
-upload_new_files <- function(files, keys = files, ...) {
+add_new_files <- function(files, keys = files, ...) {
 
   to_do <- setdiff(keys, get_keys(...))
   to_do <- match(to_do, keys)
@@ -74,11 +93,13 @@ upload_new_files <- function(files, keys = files, ...) {
 #' @param dir Directory of repo
 #' @param paths Paths (relative to `dir`) to include in upload
 #' @param ... Further arguments (such as `bucket`, `region`, etc.) passed to
-#'   methods of [aws.s3]
+#'   methods of [aws.s3::s3HTTP()]
 #'
 #' @export
 upload_repo <- function(dir = "." , paths = c("index.html", "bin", "src"),
                         ...) {
+
+  stopifnot(requireNamespace("aws.s3", quietly = TRUE))
 
   full_paths <- file.path(dir, paths)
 
@@ -98,7 +119,7 @@ upload_repo <- function(dir = "." , paths = c("index.html", "bin", "src"),
   rm_extra_keys(keys, ...)
   rm_old_keys(files, keys, ...)
 
-  upload_new_files(files, keys, ...)
+  add_new_files(files, keys, ...)
 
   invisible(NULL)
 }
@@ -107,9 +128,19 @@ upload_repo <- function(dir = "." , paths = c("index.html", "bin", "src"),
 #' @export
 download_repo <- function(dir = ".", ...) {
 
+  stopifnot(requireNamespace("aws.s3", quietly = TRUE))
+
   ensure_empty_dir(dir)
 
-  aws.s3::s3sync(dir, direction = "download", verbose = FALSE, ...)
+  keys <- get_keys(NULL, ...)
+
+  res <- Map(aws.s3::save_object, keys, file = file.path(dir, keys),
+             MoreArgs = list(...))
+
+  if (any(!res)) {
+    warning("The following keys were not downloaded\n  - ",
+            paste0(keys[res], collapse = "\n  - "))
+  }
 
   invisible(NULL)
 }

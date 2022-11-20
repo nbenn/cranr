@@ -13,7 +13,7 @@ s3_object <- function(file, dir = ".", bucket = "local",
 
   res <- list(
     Key = file,
-    LastModified = format(info[["mtime"]], "%Y-%m-%dT%H:%M:%S.000Z"),
+    LastModified = format(info[["mtime"]], "%FT%H:%M:%S.000Z", tz = "UTC"),
     ETag = paste0("\"", tools::md5sum(file.path(dir, file)), "\""),
     Size = info[["size"]],
     Owner = digest::digest(info[["uname"]], "sha256"),
