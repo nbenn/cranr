@@ -14,14 +14,9 @@ init_repo <- function(dir = ".", ...) {
 
   ensure_empty_dir(dir)
 
-  writeLines("## Drat Repo", file.path(dir, "README.md"))
-
   dir.create(file.path(dir, "src", "contrib"), recursive = TRUE)
 
-  writeLines(
-    "<!doctype html><title>empty placeholder file</title>",
-    file.path(dir, "index.html")
-  )
+  add_website_files(dir)
 
   update_repo(dir, ...)
 
@@ -56,6 +51,8 @@ update_repo <- function(dir = ".", check_cran = FALSE,
   if (length(to_rm)) {
     unlink(to_rm, recursive = TRUE)
   }
+
+  update_website_files(dir)
 
   invisible(NULL)
 }
@@ -92,7 +89,7 @@ write_lines_gz <- function(text, filename, ...) {
 #'
 #' @rdname init_repo
 #' @export
-insert_pkg <- function(pkg, dir = ".", ...) {
+insert_pkg <- function(pkg, dir = ".", update_site = TRUE, ...) {
 
   stopifnot(file.exists(pkg), dir.exists(dir),
             file.exists(file.path(dir, "index.html")))
@@ -118,13 +115,23 @@ insert_pkg <- function(pkg, dir = ".", ...) {
 
   write_packages(pkgdir, pkgtype, ...)
 
+  if (isTRUE(update_site)) {
+    update_website_files(dir)
+  }
+
   invisible(NULL)
 }
 
 #' @rdname init_repo
 #' @export
-insert_pkgs <- function(pkgs, ...){
-  lapply(pkgs, insert_pkg, ...)
+insert_pkgs <- function(pkgs, dir = ".", update_site = TRUE, ...) {
+
+  lapply(pkgs, insert_pkg, dir = dir, update_site = FALSE, ...)
+
+  if (isTRUE(update_site)) {
+    update_website_files(dir)
+  }
+
   invisible(NULL)
 }
 
@@ -205,4 +212,35 @@ get_versions <- function(flavor, base_url, check_cran = FALSE) {
   }
 
   file.path("bin", flavor, "contrib", res)
+}
+
+add_website_files <- function(dir) {
+
+  if (requireNamespace("rmarkdown", quietly = TRUE)) {
+
+    res <- file.copy(system.file("templates", "index.Rmd", package = "cranr"),
+                     dir, overwrite = FALSE)
+
+    if (!isTRUE(res)) {
+      warning("Could not successfully initialize index.Rmd")
+    }
+
+  } else {
+    writeLines(
+      "<!doctype html><title>empty placeholder file</title>",
+      file.path(dir, "index.html")
+    )
+  }
+}
+
+update_website_files <- function(dir) {
+
+  file <- file.path(dir, "index.Rmd")
+
+  if (requireNamespace("rmarkdown", quietly = TRUE) && file.exists(file)) {
+    rmarkdown::render(file, quiet = TRUE)
+    file.rename(file.path(dir, "index.md"), file.path(dir, "README.md"))
+  }
+
+  invisible(NULL)
 }

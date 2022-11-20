@@ -1,0 +1,30 @@
+---
+title: CRAN-like repo
+layout: post
+output:
+  html_document:
+    self_contained: true
+    keep_md: true
+---
+
+CRAN-like R package repository inspired by [`drat`](https://github.com/eddelbuettel/drat).
+
+## Package listing
+
+```{r, file-listing, echo = FALSE, results = "asis"}
+if (file.exists("src/contrib/PACKAGES")) {
+  pkgs <- readLines("src/contrib/PACKAGES")
+  pkgs <- split(pkgs, cumsum(pkgs == ""))
+  pkgs <- Map(`[`, pkgs, lapply(pkgs, `!=`, ""))
+  pkgs <- lapply(pkgs, paste, collapse = "  \n")
+  pkgs <- paste0("- ", pkgs)
+} else {
+  pkgs <- NULL
+}
+
+if (length(pkgs)) {
+  cat(pkgs, sep = "\n")
+} else {
+  cat("Empty repository")
+}
+```
