@@ -13,6 +13,8 @@ test_that("install pkgs", {
   expect_identical(list.files(file.path(dir, "src")), "contrib")
   expect_length(list.files(file.path(dir, "src", "contrib")), 0L)
 
+  expect_setequal(c("macosx", "windows"), list.files(file.path(dir, "bin")))
+
   pkg1 <- pkgbuild::build(
     system.file("testdata", "pkg1", package = "cranr"),
     withr::local_tempdir(),

@@ -151,11 +151,11 @@ get_links_or_null <- function(url) {
     encoding = "UTF-8"
   )
 
-  vapply(xml2::xml_find_all(xml, "//a"), xml2::xml_attr, character(1L), "href")
+  chr_ply(xml2::xml_find_all(xml, "//a"), xml2::xml_attr, "href")
 }
 
 pkgs_available <- function(...) {
-  all(vapply(c(...), requireNamespace, logical(1L), quietly = TRUE))
+  all(lgl_ply(c(...), requireNamespace, quietly = TRUE))
 }
 
 get_cran_url <- function(fallback = "https://cloud.r-project.org") {

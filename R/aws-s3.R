@@ -1,20 +1,20 @@
 
 get_keys <- function(...) {
-  vapply(aws.s3::get_bucket(...), `[[`, character(1L), "Key")
+  chr_ply(aws.s3::get_bucket(...), `[[`, "Key")
 }
 
 get_md5 <- function(keys = NULL, ...) {
 
   objects <- aws.s3::get_bucket(...)
 
-  md5 <- vapply(objects, `[[`, character(1L), "ETag")
+  md5 <- chr_ply(objects, `[[`, "ETag")
   md5 <- gsub("\"", "", md5)
 
   if (is.null(keys)) {
     return(md5)
   }
 
-  md5[match(keys, vapply(objects, `[[`, character(1L), "Key"))]
+  md5[match(keys, chr_ply(objects, `[[`, "Key"))]
 }
 
 rm_keys <- function(keys, ...) {
@@ -23,11 +23,11 @@ rm_keys <- function(keys, ...) {
     message("removing keys\n  -", paste0(keys, collapse = "\n  -"))
   }
 
-  res <- vapply(keys, aws.s3::delete_object, logical(1L), ...)
+  res <- lgl_ply(keys, aws.s3::delete_object, ...)
 
   if (any(!res)) {
     warning("The following keys were not deleted\n  -",
-            paste0(keys[res], collapse = "\n  -"))
+            paste0(keys[!res], collapse = "\n  -"))
   }
 
   invisible(NULL)
@@ -57,7 +57,7 @@ upload_new_files <- function(files, keys = files, ...) {
   }
 
   res <- Map(aws.s3::put_object, files[to_do], keys, MoreArgs = list(...))
-  res <- vapply(res, `[[`, logical(1L), 1L)
+  res <- lgl_ply(res, `[[`, 1L)
 
   if (any(!res)) {
     warning("The following keys were not uploaded\n  - ",
@@ -80,20 +80,18 @@ upload_new_files <- function(files, keys = files, ...) {
 upload_repo <- function(dir = "." , paths = c("index.html", "bin", "src"),
                         ...) {
 
-  dirs <- list.dirs(dir, full.names = FALSE, recursive = FALSE)
-  files <- setdiff(paths, dirs)
+  full_paths <- file.path(dir, paths)
 
-  files <- file.path(dir, files)
+  dirs <- file.info(full_paths)[["isdir"]]
+  files <- full_paths[!dirs]
+
+  final_paths <- lapply(full_paths[dirs], list.files, recursive = TRUE)
+  final_paths <- Map(file.path, paths[dirs], final_paths)
+  final_paths <- file.path(dir, unlist(final_paths))
 
   stopifnot(all(file.exists(files)))
 
-  dirs <- intersect(paths, dirs)
-
-  for (path in dirs) {
-    files <- c(files,
-      list.files(file.path(dir, path), full.names = TRUE, recursive = TRUE)
-    )
-  }
+  files <- c(files, final_paths)
 
   keys <- sub(paste0("^", dir, "/?"), "", files)
 
