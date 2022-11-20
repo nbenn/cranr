@@ -5,11 +5,14 @@
     Message <simpleMessage>
       removing keys
         -README.md
+        -index.Rmd
       removing keys
+        -index.html
         -src/contrib/PACKAGES
         -src/contrib/PACKAGES.gz
         -src/contrib/PACKAGES.rds
       adding keys
+        - index.html
         - src/contrib/PACKAGES
         - src/contrib/PACKAGES.gz
         - src/contrib/PACKAGES.rds

@@ -86,6 +86,7 @@ write_lines_gz <- function(text, filename, ...) {
 }
 
 #' @param pkg,pkgs R package bundle(s)
+#' @param update_site Whether to update the `index.html`
 #'
 #' @rdname init_repo
 #' @export

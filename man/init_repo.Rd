@@ -11,9 +11,9 @@ init_repo(dir = ".", ...)
 
 update_repo(dir = ".", check_cran = FALSE, base_url = get_cran_url())
 
-insert_pkg(pkg, dir = ".", ...)
+insert_pkg(pkg, dir = ".", update_site = TRUE, ...)
 
-insert_pkgs(pkgs, ...)
+insert_pkgs(pkgs, dir = ".", update_site = TRUE, ...)
 }
 \arguments{
 \item{dir}{Repository directory}
@@ -26,6 +26,8 @@ insert_pkgs(pkgs, ...)
 \item{base_url}{CRAN URL}
 
 \item{pkg, pkgs}{R package bundle(s)}
+
+\item{update_site}{Whether to update the \code{index.html}}
 }
 \description{
 By creating the \code{src/contrib} path and a top-level \code{index.html} file,
