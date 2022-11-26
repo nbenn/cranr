@@ -136,6 +136,7 @@ download_repo <- function(dir = ".", ...) {
 
   res <- Map(aws.s3::save_object, keys, file = file.path(dir, keys),
              MoreArgs = list(...))
+  res <- lgl_ply(res, `[[`, 1L)
 
   if (any(!res)) {
     warning("The following keys were not downloaded\n  - ",
