@@ -59,6 +59,10 @@ update_repo <- function(dir = ".", check_cran = FALSE,
 
 add_path <- function(path) {
 
+  if (file.exists(path)) {
+    return(invisible(FALSE))
+  }
+
   pp <- file.path(path, "PACKAGES")
   ppz <- paste0(pp, ".gz")
 

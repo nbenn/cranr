@@ -58,7 +58,7 @@ rm_old_keys <- function(files, keys, ...) {
 
   if (length(different)) {
     file_mtime <- file.info(files[match(different, keys)])[["mtime"]]
-    rm_keys(different[get_mtime(different, ...) <= file_mtime])
+    rm_keys(different[get_mtime(different, ...) <= file_mtime], ...)
   }
 
   invisible(NULL)
