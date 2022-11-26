@@ -58,10 +58,10 @@ rm_old_keys <- function(files, keys, ...) {
 
   if (length(different)) {
     file_mtime <- file.info(files[match(different, keys)])[["mtime"]]
-    to_rm <- different[get_mtime(different, ...) <= file_mtime]
+    rm_keys(different[get_mtime(different, ...) <= file_mtime])
   }
 
-  rm_keys(to_rm, ...)
+  invisible(NULL)
 }
 
 add_new_files <- function(files, keys = files, ...) {
@@ -136,7 +136,7 @@ download_repo <- function(dir = ".", ...) {
 
   res <- Map(aws.s3::save_object, keys, file = file.path(dir, keys),
              MoreArgs = list(...))
-  res <- lgl_ply(res, `[[`, 1L)
+  res <- lgl_ply(res, file.exists)
 
   if (any(!res)) {
     warning("The following keys were not downloaded\n  - ",
