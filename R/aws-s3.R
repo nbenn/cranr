@@ -38,8 +38,15 @@ rm_keys <- function(keys, ...) {
   invisible(NULL)
 }
 
-rm_extra_keys <- function(keys, ...) {
-  rm_keys(setdiff(get_keys(...), keys), ...)
+rm_extra_keys <- function(keys, paths, ...) {
+
+  current <- get_keys(...)
+
+  hits <- lapply(paste0("^", paths), grep, current, value = TRUE)
+  hits <- unlist(hits, recursive = FALSE, use.names = FALSE)
+  hits <- unique(hits)
+
+  rm_keys(setdiff(hits, keys), ...)
 }
 
 rm_old_keys <- function(files, keys, ...) {
@@ -116,7 +123,7 @@ upload_repo <- function(dir = "." , paths = c("index.html", "bin", "src"),
 
   keys <- sub(paste0("^", dir, "/?"), "", files)
 
-  rm_extra_keys(keys, ...)
+  rm_extra_keys(keys, paths, ...)
   rm_old_keys(files, keys, ...)
 
   add_new_files(files, keys, ...)

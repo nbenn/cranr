@@ -4,9 +4,6 @@
       upload_repo(loc)
     Message <simpleMessage>
       removing keys
-        -README.md
-        -index.Rmd
-      removing keys
         -index.html
         -src/contrib/PACKAGES
         -src/contrib/PACKAGES.gz
